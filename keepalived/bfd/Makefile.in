@@ -1,0 +1,41 @@
+# Makefile
+
+CC	 = @CC@
+SNMP_FLAG = @SNMP_SUPPORT@
+BFD_FLAG = @BFD_SUPPORT@
+INCLUDES = -I../include -I../../lib
+CFLAGS	 = @CFLAGS@ @CPPFLAGS@ $(INCLUDES) \
+	   -Wall -Wunused -Wstrict-prototypes -Wextra
+DEFS	 = -D@SNMP_SUPPORT@ -D@BFD_SUPPORT@ @DFLAGS@
+COMPILE	 = $(CC) $(CFLAGS) $(DEFS)
+
+OBJS = 	bfd.o bfd_data.o bfd_parser.o bfd_daemon.o bfd_scheduler.o bfd_event.o
+
+.c.o:
+	$(COMPILE) -c $<
+
+all:	$(OBJS)
+
+clean:
+	rm -f *.a *.o *~
+
+distclean: clean
+	rm -f Makefile
+
+bfd.o: bfd.c ../include/bfd.h ../include/bfd_data.h ../../lib/logger.h
+bfd_data.o: bfd_data.c ../include/bfd.h ../include/bfd_data.h \
+	../../lib/logger.h ../../lib/parser.h ../../lib/memory.h \
+	../../lib/utils.h
+bfd_parser.o: bfd_parser.c ../include/bfd.h ../include/bfd_data.h \
+	../include/bfd_parser.h ../../lib/logger.h ../../lib/parser.h \
+	../include/global_parser.h ../../lib/utils.h
+bfd_daemon.o: bfd_daemon.c ../include/bfd_daemon.h  ../include/bfd_data.h \
+	../include/bfd_parser.h ../include/bfd_scheduler.h ../include/pidfile.h \
+	../../lib/logger.h ../../lib/signals.h ../../lib/list.h \
+	../include/main.h ../../lib/parser.h ../../lib/timer.h \
+	../include/bfd_event.h
+bfd_scheduler.o: bfd_scheduler.c ../include/bfd_scheduler.h ../include/bfd.h \
+	../include/bfd_data.h ../../lib/parser.h ../../lib/logger.h \
+	../../lib/memory.h ../include/bfd_event.h
+bfd_event.o: bfd_event.c ../include/bfd_event.h ../include/bfd.h \
+	../../lib/logger.h ../include/main.h

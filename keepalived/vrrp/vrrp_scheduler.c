@@ -31,15 +31,18 @@
 #include "vrrp_data.h"
 #include "vrrp_index.h"
 #include "ipvswrapper.h"
-#include "memory.h"
 #include "notify.h"
 #include "list.h"
 #include "logger.h"
-#include "main.h"
 #include "smtp.h"
 #include "signals.h"
 #ifdef _WITH_SNMP_
 #include "vrrp_snmp.h"
+#endif
+#include "main.h"
+#include "memory.h"
+#ifdef _WITH_BFD_
+#include "bfd_event.h"
 #endif
 
 /* VRRP FSM (Finite State Machine) design.
@@ -79,6 +82,10 @@ static int vrrp_update_priority(thread_t * thread);
 static int vrrp_script_child_timeout_thread(thread_t * thread);
 static int vrrp_script_child_thread(thread_t * thread);
 static int vrrp_script_thread(thread_t * thread);
+
+#ifdef _WITH_BFD_
+static int vrrp_bfd_thread(thread_t * thread);
+#endif
 
 struct {
 	void (*read) (vrrp_t *, char *, int);
@@ -390,6 +397,12 @@ vrrp_register_workers(list l)
 	if (!LIST_ISEMPTY(vrrp_data->vrrp_script))
 		vrrp_init_script(vrrp_data->vrrp_script);
 
+#ifdef _WITH_BFD_
+	/* Init BFD tracking thread */
+	vrrp_data->bfd_thread = thread_add_read(master, vrrp_bfd_thread, NULL,
+						 bfd_event_pipe[0], TIMER_HZ);
+#endif
+
 	/* Register VRRP workers threads */
 	for (e = LIST_HEAD(l); e; ELEMENT_NEXT(e)) {
 		sock = ELEMENT_DATA(e);
@@ -554,6 +567,9 @@ void
 vrrp_dispatcher_release(vrrp_data_t *data)
 {
 	free_list(data->vrrp_socket_pool);
+#ifdef _WITH_BFD_
+	thread_cancel(data->bfd_thread);
+#endif
 }
 
 static void
@@ -1097,3 +1113,68 @@ vrrp_script_child_timeout_thread(thread_t * thread)
 
 	return 0;
 }
+
+#ifdef _WITH_BFD_
+static void
+vrrp_handle_bfd_event(bfd_event_t * evt)
+{
+	vrrp_t * vrrp;
+	element e;
+	u_int32_t delivery_time;
+
+	assert(evt);
+
+	if ( debug & 32 ) {
+		delivery_time = timer_tol(timer_sub(timer_now(), evt->sent_time));
+		log_message(LOG_INFO, "Recieved BFD event: instance %s is in"
+			    " state %s (deliveried in %i usec)",
+			    evt->iname, BFD_STATE_STR(evt->state), delivery_time);
+	}
+
+	for (e = LIST_HEAD(vrrp_data->vrrp); e; ELEMENT_NEXT(e)) {
+		vrrp = ELEMENT_DATA(e);
+
+		if (!vrrp->track_bfd)
+			continue;
+
+		if (strcmp(vrrp->track_bfd, evt->iname))
+			continue;
+
+		if (evt->state == BFD_STATE_DOWN) {
+			log_message(LOG_INFO, "VRRP_Instance(%s) Tracked BFD"
+				    " instance %s is DOWN", vrrp->iname, evt->iname);
+			if (vrrp->state == VRRP_STATE_BACK) {
+				vrrp_goto_master(vrrp);
+				vrrp_master(vrrp);
+			}
+		}
+	}
+}
+
+static int
+vrrp_bfd_thread(thread_t * thread)
+{
+	bfd_event_t * evt = NULL;
+	ssize_t evtlen = sizeof(bfd_event_t);
+	int fd = 0, ret = 0;
+
+	fd = THREAD_FD(thread);
+	vrrp_data->bfd_thread = thread_add_read(master, vrrp_bfd_thread, NULL,
+						fd, TIMER_HZ * 60);
+
+	if (thread->type != THREAD_READY_FD)
+		return 0;
+
+	if (LIST_ISEMPTY(vrrp_data->vrrp))
+		return 0;
+
+	evt = (bfd_event_t*)MALLOC(evtlen);
+	while ( (ret = read(fd, evt, evtlen)) != -1) {
+		assert(ret == evtlen);
+		vrrp_handle_bfd_event(evt);
+	}
+
+	FREE(evt);
+	return 0;
+}
+#endif

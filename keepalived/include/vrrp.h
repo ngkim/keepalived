@@ -101,6 +101,9 @@ typedef struct _vrrp_t {
 	unsigned int		vmac_ifindex;		/* ifindex of vmac interface */
 	list			track_ifp;		/* Interface state we monitor */
 	list			track_script;		/* Script state we monitor */
+#ifdef _WITH_BFD_
+	char			*track_bfd;		/* BFD instance we monitor */
+#endif
 	struct sockaddr_storage	saddr;			/* Src IP address to use in VRRP IP header */
 	struct sockaddr_storage	pkt_saddr;		/* Src IP address received in VRRP IP header */
 	list			unicast_peer;		/* List of Unicast peer to send advert to */

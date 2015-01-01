@@ -37,6 +37,7 @@
 #include "parser.h"
 #include "vrrp_daemon.h"
 #include "check_daemon.h"
+#include "bfd_daemon.h"
 #include "global_data.h"
 
 /* Global vars exported */
@@ -44,10 +45,14 @@ extern char *conf_file;		/* Configuration file */
 extern int log_facility;	/* Optional logging facilities */
 extern pid_t vrrp_child;	/* VRRP child process ID */
 extern pid_t checkers_child;	/* Healthcheckers child process ID */
+extern pid_t bfd_child;		/* BFD child process ID */
 extern int daemon_mode;		/* VRRP/CHECK subsystem selection */
 extern int linkwatch;		/* Use linkwatch kernel netlink reflection */
 #ifdef _WITH_SNMP_
 extern int snmp;		/* Enable SNMP support */
+#endif
+#ifdef _WITH_BFD_
+extern int bfd_event_pipe[2]; /* Pipe between BFD and VRRP childs */
 #endif
 
 #endif

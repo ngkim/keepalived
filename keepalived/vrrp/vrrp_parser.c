@@ -206,6 +206,14 @@ vrrp_track_scr_handler(vector_t *strvec)
 {
 	alloc_value_block(strvec, alloc_vrrp_track_script);
 }
+#ifdef _WITH_BFD_
+static void
+vrrp_track_bfd_handler(vector_t *strvec)
+{
+	vrrp_t *vrrp = LIST_TAIL_DATA(vrrp_data->vrrp);
+	vrrp->track_bfd = set_value(strvec);
+}
+#endif
 static void
 vrrp_dont_track_handler(vector_t *strvec)
 {
@@ -566,6 +574,9 @@ vrrp_init_keywords(void)
 	install_keyword("dont_track_primary", &vrrp_dont_track_handler);
 	install_keyword("track_interface", &vrrp_track_int_handler);
 	install_keyword("track_script", &vrrp_track_scr_handler);
+#ifdef _WITH_BFD_
+	install_keyword("track_bfd", &vrrp_track_bfd_handler);
+#endif
 	install_keyword("mcast_src_ip", &vrrp_srcip_handler);
 	install_keyword("unicast_src_ip", &vrrp_srcip_handler);
 	install_keyword("virtual_router_id", &vrrp_vrid_handler);

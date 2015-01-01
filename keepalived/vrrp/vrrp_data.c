@@ -273,6 +273,11 @@ dump_vrrp(void *data)
 		log_message(LOG_INFO, "   Tracked scripts = %d", LIST_SIZE(vrrp->track_script));
 		dump_list(vrrp->track_script);
 	}
+#ifdef _WITH_BFD_
+	if (vrrp->track_bfd) {
+		log_message(LOG_INFO, "   Tracked BFD instance = %s", vrrp->track_bfd);
+	}
+#endif
 	if (!LIST_ISEMPTY(vrrp->unicast_peer)) {
 		log_message(LOG_INFO, "   Unicast Peer = %d", LIST_SIZE(vrrp->unicast_peer));
 		dump_list(vrrp->unicast_peer);

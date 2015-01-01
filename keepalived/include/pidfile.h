@@ -34,8 +34,10 @@
 #define KEEPALIVED_PID_FILE "/var/run/keepalived.pid"
 #define KEEPALIVED_VRRP_PID_FILE "/var/run/keepalived_vrrp.pid"
 #define KEEPALIVED_CHECKERS_PID_FILE "/var/run/keepalived_checkers.pid"
+#define KEEPALIVED_BFD_PID_FILE "/var/run/keepalived_bfd.pid"
 #define VRRP_PID_FILE "/var/run/vrrp.pid"
 #define CHECKERS_PID_FILE "/var/run/checkers.pid"
+#define BFD_PID_FILE "/var/run/bfd.pid"
 
 /* Prototypes */
 extern int pidfile_write(char *, int);

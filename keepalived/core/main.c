@@ -31,13 +31,18 @@ char *conf_file = NULL;		/* Configuration file */
 int log_facility = LOG_DAEMON;	/* Optional logging facilities */
 pid_t vrrp_child = -1;		/* VRRP child process ID */
 pid_t checkers_child = -1;	/* Healthcheckers child process ID */
+pid_t bfd_child = -1;		/* BFD child process ID */
 int daemon_mode = 0;		/* VRRP/CHECK subsystem selection */
 int linkwatch = 0;		/* Use linkwatch kernel netlink reflection */
 char *main_pidfile = KEEPALIVED_PID_FILE;	/* overrule default pidfile */
 char *checkers_pidfile = CHECKERS_PID_FILE;	/* overrule default pidfile */
 char *vrrp_pidfile = VRRP_PID_FILE;	/* overrule default pidfile */
+char *bfd_pidfile = BFD_PID_FILE;	/* overrule default pidfile */
 #ifdef _WITH_SNMP_
 int snmp = 0;			/* Enable SNMP support */
+#endif
+#ifdef _WITH_BFD_
+int bfd_event_pipe[2] = { -1, -1 };
 #endif
 
 /* Log facility table */
@@ -65,6 +70,9 @@ stop_keepalived(void)
 	if (daemon_mode & 2 || !daemon_mode)
 		pidfile_rm(checkers_pidfile);
 
+	if (daemon_mode & 4 || !daemon_mode)
+		pidfile_rm(bfd_pidfile);
+
 #ifdef _DEBUG_
 	keepalived_free_final("Parent process");
 #endif
@@ -74,6 +82,21 @@ stop_keepalived(void)
 static void
 start_keepalived(void)
 {
+#ifdef _WITH_BFD_
+	/* Open BFD control pipe */
+	if ( pipe(bfd_event_pipe) == -1) {
+		log_message(LOG_ERR, "Unable to create BFD event pipe: %m");
+		stop_keepalived();
+		return;
+	}
+	fcntl(bfd_event_pipe[0], F_SETFL,
+		O_NONBLOCK | fcntl(bfd_event_pipe[0], F_GETFL));
+	fcntl(bfd_event_pipe[1], F_SETFL,
+		O_NONBLOCK | fcntl(bfd_event_pipe[1], F_GETFL));
+	/* start bfd child */
+	if (daemon_mode & 4 || !daemon_mode)
+		start_bfd_child();
+#endif
 #ifdef _WITH_LVS_
 	/* start healthchecker child */
 	if (daemon_mode & 2 || !daemon_mode)
@@ -95,6 +118,8 @@ sighup(void *v, int sig)
 		kill(vrrp_child, SIGHUP);
 	if (checkers_child > 0)
 		kill(checkers_child, SIGHUP);
+	if (bfd_child > 0)
+		kill(bfd_child, SIGHUP);
 }
 
 /* Terminate handler */
@@ -113,6 +138,10 @@ sigend(void *v, int sig)
 	if (checkers_child > 0) {
 		kill(checkers_child, SIGTERM);
 		waitpid(checkers_child, &status, WNOHANG);
+	}
+	if (bfd_child > 0) {
+		kill(bfd_child, SIGTERM);
+		waitpid(bfd_child, &status, WNOHANG);
 	}
 }
 
@@ -183,9 +212,9 @@ parse_cmdline(int argc, char **argv)
 	};
 
 #ifdef _WITH_SNMP_
-	while ((c = getopt_long(argc, argv, "vhlndVIDRS:f:PCp:c:r:x", long_options, NULL)) != EOF) {
+	while ((c = getopt_long(argc, argv, "vhlndVIDRS:f:PCBp:c:r:b:x", long_options, NULL)) != EOF) {
 #else
-	while ((c = getopt_long(argc, argv, "vhlndVIDRS:f:PCp:c:r:", long_options, NULL)) != EOF) {
+	while ((c = getopt_long(argc, argv, "vhlndVIDRS:f:PCBp:c:r:b:", long_options, NULL)) != EOF) {
 #endif
 		switch (c) {
 		case 'v':
@@ -229,6 +258,9 @@ parse_cmdline(int argc, char **argv)
 		case 'C':
 			daemon_mode |= 2;
 			break;
+		case 'B':
+			daemon_mode |= 4;
+			break;
 		case 'p':
 			main_pidfile = optarg;
 			break;
@@ -237,6 +269,9 @@ parse_cmdline(int argc, char **argv)
 			break;
 		case 'r':
 			vrrp_pidfile = optarg;
+			break;
+		case 'b':
+			bfd_pidfile = optarg;
 			break;
 #ifdef _WITH_SNMP_
 		case 'x':

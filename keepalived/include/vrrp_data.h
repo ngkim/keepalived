@@ -61,6 +61,10 @@ typedef struct _vrrp_data {
 	list			vrrp_index_fd;
 	list			vrrp_socket_pool;
 	list			vrrp_script;
+#ifdef _WITH_BFD_
+	/* BFD control pipe read thread */
+	thread_t		*bfd_thread;
+#endif
 } vrrp_data_t;
 
 /* Global Vars exported */

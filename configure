@@ -621,6 +621,7 @@ ac_includes_default="\
 
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
+BFD_SUPPORT
 VRRP_SUPPORT
 USE_NL
 IPVS_SUPPORT
@@ -692,6 +693,7 @@ enable_option_checking
 enable_lvs_syncd
 enable_lvs
 enable_vrrp
+enable_bfd
 with_kernel_dir
 with_kernel_version
 enable_fwmark
@@ -1319,6 +1321,7 @@ Optional Features:
   --disable-lvs-syncd     do not use LVS synchronization daemon
   --disable-lvs           do not use the LVS framework
   --disable-vrrp          do not use the VRRP framework
+  --disable-bfd           do not use the BFD framework
   --disable-fwmark        compile without SO_MARK support
   --enable-snmp           compile with SNMP support
   --enable-sha1           compile with SHA1 support
@@ -3243,6 +3246,11 @@ if test "${enable_vrrp+set}" = set; then :
   enableval=$enable_vrrp;
 fi
 
+# Check whether --enable-bfd was given.
+if test "${enable_bfd+set}" = set; then :
+  enableval=$enable_bfd;
+fi
+
 
 # Check whether --with-kernel-dir was given.
 if test "${with_kernel_dir+set}" = set; then :
@@ -4183,6 +4191,11 @@ if test "$enable_vrrp" != "no"; then
   VRRP_SUPPORT="_WITH_VRRP_"
 fi
 
+BFD_SUPPORT="_WITHOUT_BFD_"
+if test "$enable_bfd" != "no"; then
+  BFD_SUPPORT="_WITH_BFD_"
+fi
+
 CPPFLAGS="$CPPFLAGS -I$kernelinc"
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for kernel macvlan support" >&5
 $as_echo_n "checking for kernel macvlan support... " >&6; }
@@ -4769,6 +4782,9 @@ done
 OUTPUT_TARGET="$OUTPUT_TARGET keepalived/Makefile lib/Makefile"
 if test "${VRRP_SUPPORT}" = "_WITH_VRRP_"; then
   OUTPUT_TARGET="$OUTPUT_TARGET keepalived/vrrp/Makefile"
+fi
+if test "${BFD_SUPPORT}" = "_WITH_BFD_"; then
+  OUTPUT_TARGET="$OUTPUT_TARGET keepalived/bfd/Makefile"
 fi
 if test "$IPVS_SUPPORT" = "_WITH_LVS_"; then
   OUTPUT_TARGET="$OUTPUT_TARGET keepalived/check/Makefile"
@@ -5988,6 +6004,11 @@ if test "${VRRP_SUPPORT}" = "_WITH_VRRP_"; then
   fi
 else
   echo "Use VRRP Framework       : No"
+fi
+if test "${BFD_SUPPORT}" = "_WITH_BFD_"; then
+  echo "Use BFD Framework        : Yes"
+else
+  echo "Use BFD Framework        : No"
 fi
 if test "${SNMP_SUPPORT}" = "_WITH_SNMP_"; then
   echo "SNMP support             : Yes"

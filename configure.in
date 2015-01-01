@@ -24,6 +24,8 @@ AC_ARG_ENABLE(lvs,
   [  --disable-lvs           do not use the LVS framework])
 AC_ARG_ENABLE(vrrp,
   [  --disable-vrrp          do not use the VRRP framework])
+AC_ARG_ENABLE(bfd,
+  [  --disable-bfd           do not use the BFD framework])
 AC_ARG_WITH(kernel-dir,
   [  --with-kernel-dir=DIR   path to linux kernel source directory],
   [kernelinc="$withval/include" kernelpath="$withval"],
@@ -193,6 +195,11 @@ if test "$enable_vrrp" != "no"; then
   VRRP_SUPPORT="_WITH_VRRP_"
 fi
 
+BFD_SUPPORT="_WITHOUT_BFD_"
+if test "$enable_bfd" != "no"; then
+  BFD_SUPPORT="_WITH_BFD_"
+fi
+
 dnl ----[ Checks for kernel VMAC support ]----
 CPPFLAGS="$CPPFLAGS -I$kernelinc"
 AC_MSG_CHECKING([for kernel macvlan support])
@@ -293,6 +300,7 @@ AC_SUBST(VERSION_DATE)
 AC_SUBST(IPVS_SUPPORT)
 AC_SUBST(USE_NL)
 AC_SUBST(VRRP_SUPPORT)
+AC_SUBST(BFD_SUPPORT)
 
 dnl ----[ Checks for typedefs, structures, and compiler characteristics ]----
 AC_C_CONST
@@ -309,6 +317,9 @@ dnl ----[ Process output target ]----
 OUTPUT_TARGET="$OUTPUT_TARGET keepalived/Makefile lib/Makefile"
 if test "${VRRP_SUPPORT}" = "_WITH_VRRP_"; then
   OUTPUT_TARGET="$OUTPUT_TARGET keepalived/vrrp/Makefile"
+fi
+if test "${BFD_SUPPORT}" = "_WITH_BFD_"; then
+  OUTPUT_TARGET="$OUTPUT_TARGET keepalived/bfd/Makefile"
 fi
 if test "$IPVS_SUPPORT" = "_WITH_LVS_"; then
   OUTPUT_TARGET="$OUTPUT_TARGET keepalived/check/Makefile"
@@ -368,6 +379,11 @@ if test "${VRRP_SUPPORT}" = "_WITH_VRRP_"; then
   fi
 else
   echo "Use VRRP Framework       : No"
+fi
+if test "${BFD_SUPPORT}" = "_WITH_BFD_"; then
+  echo "Use BFD Framework        : Yes"
+else
+  echo "Use BFD Framework        : No"
 fi
 if test "${SNMP_SUPPORT}" = "_WITH_SNMP_"; then
   echo "SNMP support             : Yes"
